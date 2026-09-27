@@ -20,10 +20,16 @@ profile 上的任意 agent 都能用当前版本的 Scrapling API 抓取、爬�
 
 ## 安装
 
-用 `dsh plugin` 命令安装到某个 profile：
+用 `dsh plugin` 命令从 GitHub 仓库安装到某个 profile：
 
 ```bash
-dsh plugin --profile <profile> add dsh-plugin-scrapling
+dsh plugin --profile <profile> add https://github.com/NickyWooden/dsh-scrapling
+```
+
+如果已配置 GitHub SSH 密钥，SSH 形式同样可用：
+
+```bash
+dsh plugin --profile <profile> add git@github.com:NickyWooden/dsh-scrapling.git
 ```
 
 本地检出（开发）：
@@ -32,7 +38,7 @@ dsh plugin --profile <profile> add dsh-plugin-scrapling
 dsh plugin --profile <profile> add /path/to/dsh-plugin-scrapling
 ```
 
-或者在 Web GUI 中：打开 profile 的 **Plugins** 页面，安装 `dsh-plugin-scrapling`。
+或者在 Web GUI 中：打开 profile 的 **Plugins** 页面，用上面的仓库 URL 安装。
 
 技能会在该 profile 的下一个会话启动时可用（若启用了 HMR 且 profile 会重组合，则立即可用）。
 

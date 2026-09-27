@@ -22,10 +22,16 @@ process was launched from.
 
 ## Installation
 
-Install into a profile with the `dsh plugin` command:
+Install from the GitHub repository into a profile with the `dsh plugin` command:
 
 ```bash
-dsh plugin --profile <profile> add dsh-plugin-scrapling
+dsh plugin --profile <profile> add https://github.com/NickyWooden/dsh-scrapling
+```
+
+If you have GitHub SSH keys set up, the SSH form works too:
+
+```bash
+dsh plugin --profile <profile> add git@github.com:NickyWooden/dsh-scrapling.git
 ```
 
 For a local checkout (development):
@@ -34,7 +40,7 @@ For a local checkout (development):
 dsh plugin --profile <profile> add /path/to/dsh-plugin-scrapling
 ```
 
-Or from the Web GUI: open the profile's **Plugins** page and install `dsh-plugin-scrapling`.
+Or from the Web GUI: open the profile's **Plugins** page and install from the repository URL above.
 
 The skill becomes available the next time a session on that profile starts (or immediately,
 when HMR is enabled and the profile recomposes).

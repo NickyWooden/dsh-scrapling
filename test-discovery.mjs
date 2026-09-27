@@ -32,6 +32,24 @@ try {
   for (const s of skillList) {
     console.log(`  - ${s.name} (source: ${s.source}, rank: ${s.rank})`);
   }
+  // Diagnostics: dump the raw catalog shape and any provider info
+  if (skillList.length === 0) {
+    console.log("\n[diag] raw catalog type:", typeof catalog, Array.isArray(catalog) ? "array" : Object.keys(catalog ?? {}));
+    if (catalog && !Array.isArray(catalog)) {
+      console.log("[diag] catalog keys:", JSON.stringify(catalog, (k, v) => k === "content" ? "<body>" : v, 2).slice(0, 2000));
+    }
+    // Check the skill-filesystem provider's bundledSkillDir via the entry
+    const loader = ctx.get("loader");
+    if (loader) {
+      try {
+      for (const entry of loader.entries()) {
+        if (entry.options?.name === "@deepseek-ai/dsh-skill-filesystem") {
+          console.log("[diag] skill-filesystem entry id:", entry.id, "disabled:", entry.options.disabled, "config:", JSON.stringify(entry.options.config));
+        }
+      }
+      } catch (e) { console.log("[diag] loader.entries error:", e.message); }
+    }
+  }
 
   // Specifically check for the scrapling skill
   const scrapling = skillList.find((s) => s.name === "scrapling-official");
