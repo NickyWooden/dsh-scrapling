@@ -1,0 +1,22 @@
+# dsh-plugin-scrapling bundle patch.
+#
+# This bundle ships the official Scrapling agent skill (a directory bundle with
+# a SKILL.md plus on-demand references/ and examples/). It makes the skill
+# discoverable by the host's `dsh-skill-filesystem` provider by pointing that
+# provider's `bundledSkillDir` at the skill root bundled inside this package.
+#
+# The `!!js` expression resolves the skill root to an absolute path at load
+# time. `baseUrl` is the Loader's base URL (the profile directory, e.g.
+# `file:///<dshHome>/profiles/<profile>/`), so the path is stable regardless of
+# the process working directory. The skill root is the `skills/` directory,
+# which contains the `scrapling-official/` bundle; the filesystem provider
+# discovers `<root>/<name>/SKILL.md` one level deep.
+#
+# The web-app bundle disables the host-level `skill-filesystem` row (presets own
+# local discovery there). This bundle re-enables it so the bundled skill root is
+# scanned on every profile that installs this bundle, regardless of preset.
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  disabled: false
+  config:
+    bundledSkillDir: !!js new URL('node_modules/dsh-plugin-scrapling/skills', baseUrl).pathname

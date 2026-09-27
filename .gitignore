@@ -1,0 +1,19 @@
+# Dependencies (a local `pnpm install` / `dsh plugin add` may create these)
+node_modules/
+
+# Build / pack artifacts
+*.tgz
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

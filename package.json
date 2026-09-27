@@ -1,0 +1,40 @@
+{
+  "name": "dsh-plugin-scrapling",
+  "version": "0.1.0",
+  "description": "Bundles the official Scrapling web-scraping agent skill (anti-bot bypass, stealth browsing, spiders, adaptive parsing) into a DeepSeek Harness profile.",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "skill",
+    "scrapling",
+    "web-scraping",
+    "crawler",
+    "spider"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "dsh": ">=0.1.7-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "skills",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/D4Vinci/Scrapling.git",
+    "directory": "dsh-plugin"
+  },
+  "homepage": "https://scrapling.readthedocs.io/en/latest/index.html",
+  "author": {
+    "name": "D4Vinci"
+  }
+}
