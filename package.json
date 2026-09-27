@@ -30,8 +30,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/D4Vinci/Scrapling.git",
-    "directory": "dsh-plugin"
+    "url": "git+https://github.com/NickyWooden/dsh-scrapling.git"
   },
   "homepage": "https://scrapling.readthedocs.io/en/latest/index.html",
   "author": {
