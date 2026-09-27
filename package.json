@@ -12,7 +12,7 @@
     "crawler",
     "spider"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "engines": {
     "dsh": ">=0.1.7-rc.2"

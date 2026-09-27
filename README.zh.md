@@ -82,4 +82,4 @@ bundle 在 `cordis.patch.yml` 中声明单条 patch 行：
 
 ## 许可
 
-[MIT](LICENSE) — 打包的技能自带其自身的 `LICENSE.txt`。
+[Apache 2.0](LICENSE) — 打包的技能自带其自身的 `LICENSE.txt`（BSD 3-Clause）。

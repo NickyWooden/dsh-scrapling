@@ -91,4 +91,4 @@ skill's `SKILL.md` frontmatter, and republish.
 
 ## License
 
-[MIT](LICENSE) — the bundled skill carries its own `LICENSE.txt`.
+[Apache 2.0](LICENSE) — the bundled skill carries its own `LICENSE.txt` (BSD 3-Clause).
