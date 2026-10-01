@@ -1,4 +1,4 @@
-# dsh-plugin-scrapling
+# dsh-scrapling
 
 [English](README.md) | 中文
 
@@ -35,7 +35,7 @@ dsh plugin --profile <profile> add git@github.com:NickyWooden/dsh-scrapling.git
 本地检出（开发）：
 
 ```bash
-dsh plugin --profile <profile> add /path/to/dsh-plugin-scrapling
+dsh plugin --profile <profile> add /path/to/dsh-scrapling
 ```
 
 或者在 Web GUI 中：打开 profile 的 **Plugins** 页面，用上面的仓库 URL 安装。
@@ -105,7 +105,7 @@ bundle 在 `cordis.patch.yml` 中声明单条 patch 行：
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: false
   config:
-    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-plugin-scrapling/skills", baseUrl))
+    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-scrapling/skills", baseUrl))
 ```
 
 - `bundledSkillDir` 是技能*根目录*（**包含** `scrapling-official/` bundle 的那个目录）；

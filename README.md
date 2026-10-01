@@ -1,4 +1,4 @@
-# dsh-plugin-scrapling
+# dsh-scrapling
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ dsh plugin --profile <profile> add git@github.com:NickyWooden/dsh-scrapling.git
 For a local checkout (development):
 
 ```bash
-dsh plugin --profile <profile> add /path/to/dsh-plugin-scrapling
+dsh plugin --profile <profile> add /path/to/dsh-scrapling
 ```
 
 Or from the Web GUI: open the profile's **Plugins** page and install from the repository URL above.
@@ -115,7 +115,7 @@ The bundle declares a single patch row in `cordis.patch.yml`:
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: false
   config:
-    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-plugin-scrapling/skills", baseUrl))
+    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-scrapling/skills", baseUrl))
 ```
 
 - `bundledSkillDir` is the skill *root* (the directory that **contains** the

@@ -1,4 +1,4 @@
-# dsh-plugin-scrapling bundle patch.
+# dsh-scrapling bundle patch.
 #
 # This bundle ships the official Scrapling agent skill (a directory bundle with
 # a SKILL.md plus on-demand references/ and examples/). It makes the skill
@@ -30,4 +30,4 @@
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: false
   config:
-    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-plugin-scrapling/skills", baseUrl))
+    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-scrapling/skills", baseUrl))
