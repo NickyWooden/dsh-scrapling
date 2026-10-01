@@ -12,6 +12,17 @@
 # which contains the `scrapling-official/` bundle; the filesystem provider
 # discovers `<root>/<name>/SKILL.md` one level deep.
 #
+# `URL.pathname` is NOT a filesystem path on Windows: it keeps the
+# percent-encoding and yields `/C:/...`, which the provider then `path.resolve`s
+# into the bogus `C:\C:\...`, so the skill is silently never discovered.
+# `fileURLToPath` decodes the URL and applies the platform's drive/UNC rules,
+# so the same expression works on Windows and POSIX. `process` is always in
+# scope for `!!js` evaluation (the profile loader runs it through
+# `new Function('ctx', ...)` in the main realm) and the host itself uses
+# `process.getBuiltinModule(...)` in shipped bundle patches, so this needs no
+# imports. Keep the double-quoted outer string so the expression needs no YAML
+# escaping.
+#
 # The web-app bundle disables the host-level `skill-filesystem` row (presets own
 # local discovery there). This bundle re-enables it so the bundled skill root is
 # scanned on every profile that installs this bundle, regardless of preset.
@@ -19,4 +30,4 @@
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: false
   config:
-    bundledSkillDir: !!js new URL('node_modules/dsh-plugin-scrapling/skills', baseUrl).pathname
+    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-plugin-scrapling/skills", baseUrl))

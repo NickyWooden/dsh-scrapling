@@ -1,80 +1,137 @@
-// Test script: boot the test profile and list discovered skills.
-// Usage: node test-discovery.mjs [profileName]
-import { runProfile } from "/home/ai/.local/lib/node_modules/@deepseek-ai/dsh/lib/profile-boot.js";
-import { createLaunchEnvironmentSnapshot } from "/home/ai/.local/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-launch-environment/lib/index.js";
+// Acceptance check: boot a DSH profile with a diagnostic probe and assert that
+// the plugin's bundled `scrapling-official` skill is discovered.
+//
+// Usage:
+//   node test-discovery.mjs [profileName]
+//
+// The profile must already have this plugin installed, e.g.
+//   dsh plugin --profile test-scrapling add /path/to/dsh-scrapling
+//
+// The check runs the real launcher (`dsh`) with a probe overlay, because the
+// bug this guards against is only observable at load time: the plugin's
+// `!!js` expression is not evaluated by `dsh --dump-config`, and a wrong path
+// fails as "directory not found" rather than as a startup error.
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const profileName = process.argv[2] ?? "test-scrapling";
+const here = dirname(fileURLToPath(import.meta.url));
+const profile = process.argv[2] ?? 'test-scrapling';
+const pluginRoot = process.env.DSH_SCRAPLING_ROOT ?? here;
 
-try {
-  const result = await runProfile({
-    profile: profileName,
-    patchFiles: [],
-    fromDefaultProfile: undefined,
-    resolvedProfile: undefined,
-    environment: createLaunchEnvironmentSnapshot([{ source: "process", values: { ...process.env } }]),
-    args: [],
-  });
+const probe = `
+import { writeFileSync } from 'node:fs';
 
-  const ctx = result.ctx ?? result;
-  // Give the loader a moment to settle
-  await new Promise((r) => setTimeout(() => r(), 3000));
+export const name = 'probe-skills';
+export const inject = ['skills'];
 
-  const skills = ctx.get("skills");
-  if (!skills) {
-    console.log("NO skills service found");
-    process.exit(1);
-  }
-
-  // Try to list skills
-  const catalog = await skills.list({ cwd: process.cwd() });
-  const skillList = Array.isArray(catalog) ? catalog : catalog.candidates ?? [];
-  console.log(`Discovered ${skillList.length} skills:`);
-  for (const s of skillList) {
-    console.log(`  - ${s.name} (source: ${s.source}, rank: ${s.rank})`);
-  }
-  // Diagnostics: dump the raw catalog shape and any provider info
-  if (skillList.length === 0) {
-    console.log("\n[diag] raw catalog type:", typeof catalog, Array.isArray(catalog) ? "array" : Object.keys(catalog ?? {}));
-    if (catalog && !Array.isArray(catalog)) {
-      console.log("[diag] catalog keys:", JSON.stringify(catalog, (k, v) => k === "content" ? "<body>" : v, 2).slice(0, 2000));
-    }
-    // Check the skill-filesystem provider's bundledSkillDir via the entry
-    const loader = ctx.get("loader");
-    if (loader) {
+export function apply(ctx) {
+  const finish = (code) => {
+    const exit = ctx.get('appExit');
+    if (typeof exit === 'function') exit(code);
+    setTimeout(() => process.exit(code), 500).unref?.();
+  };
+  ctx.inject(['appReady'], (readyCtx) => {
+    const run = async () => {
+      const out = { profile: ${JSON.stringify(profile)} };
       try {
-      for (const entry of loader.entries()) {
-        if (entry.options?.name === "@deepseek-ai/dsh-skill-filesystem") {
-          console.log("[diag] skill-filesystem entry id:", entry.id, "disabled:", entry.options.disabled, "config:", JSON.stringify(entry.options.config));
+        const skills = ctx.get('skills');
+        const list = (await skills.snapshot({ cwd: process.cwd() })).skills;
+        out.skills = list.map((s) => ({ name: s.name, provider: s.provider, source: s.source, path: s.locator?.path ?? s.path }));
+        out.scrapling = out.skills.find((s) => s.name === 'scrapling-official') ?? null;
+        if (out.scrapling !== null) {
+          // Discovery is not enough: load the body through the same provider to
+          // prove the resource base (references/, examples/) is readable too.
+          const loaded = await skills.get('scrapling-official', { cwd: process.cwd() });
+          out.load = loaded === undefined ? null : {
+            bodyChars: loaded.content.length,
+            resourceBase: loaded.resourceBase?.path ?? null,
+            hasSetupSection: loaded.content.includes('scrapling install'),
+          };
         }
+      } catch (error) {
+        out.error = String(error?.stack ?? error);
       }
-      } catch (e) { console.log("[diag] loader.entries error:", e.message); }
-    }
-  }
+      writeFileSync(process.env.PROBE_OUT, JSON.stringify(out, null, 2));
+      finish(out.scrapling ? 0 : 1);
+    };
+    const ready = readyCtx.get('appReady');
+    if (typeof ready?.onReady === 'function') ready.onReady(() => void run());
+    else void run();
+  });
+}
+`;
 
-  // Specifically check for the scrapling skill
-  const scrapling = skillList.find((s) => s.name === "scrapling-official");
-  if (scrapling) {
-    console.log("\n✅ SCRAPLING SKILL DISCOVERED");
-    console.log(`   name: ${scrapling.name}`);
-    console.log(`   source: ${scrapling.source}`);
-    console.log(`   rank: ${scrapling.rank}`);
-    console.log(`   path: ${scrapling.path}`);
-    if (scrapling.resourceBase) console.log(`   resourceBase: ${scrapling.resourceBase.path}`);
-  } else {
-    console.log("\n❌ SCRAPLING SKILL NOT DISCOVERED");
-  }
+const dir = mkdtempSync(join(tmpdir(), 'dsh-scrapling-probe-'));
+const probePath = join(dir, 'probe.mjs');
+const overlayPath = join(dir, 'overlay.yml');
+const reportPath = join(dir, 'report.json');
+writeFileSync(probePath, probe);
+// A relative insert name is anchored beside the patch file by the loader.
+writeFileSync(overlayPath, [
+  '# generated by test-discovery.mjs — probe only; the plugin contributes the patch under test',
+  '- insert:',
+  '    - id: probe-skills',
+  '      name: ./probe.mjs',
+  '',
+].join('\n'));
 
-  // For a test, just exit (a full fiber dispose can hang on web plugins).
-  process.exit(scrapling ? 0 : 1);
-} catch (err) {
-  console.error("Error:", err.message);
-  let cause = err.cause;
-  let depth = 0;
-  while (cause && depth < 5) {
-    console.error(`  cause[${depth}]:`, cause.message ?? String(cause));
-    if (cause.stack) console.error(cause.stack.split("\n").slice(0, 8).join("\n"));
-    cause = cause.cause;
-    depth++;
+const isWindows = process.platform === 'win32';
+console.log(`Booting profile "${profile}" with a skill-catalog probe...`);
+const launched = spawnSync(
+  'dsh',
+  ['--profile', profile, '--patch', overlayPath, '--no-open'],
+  {
+    cwd: pluginRoot,
+    env: { ...process.env, PROBE_OUT: reportPath },
+    encoding: 'utf8',
+    // stderr is captured so a refusal (e.g. a reserved profile) can be
+    // recognized and replayed; stdout is streamed because the launcher prints
+    // its bound URL there.
+    stdio: ['ignore', 'inherit', 'pipe'],
+    // `dsh` is a `.cmd` shim on Windows, which Node cannot execute directly.
+    shell: isWindows,
+    // The probe exits the app as soon as it has reported; this is only a guard
+    // against a hung launcher on a machine where the probe cannot mount.
+    timeout: 180_000,
+  },
+);
+
+const report = existsSync(reportPath) ? JSON.parse(readFileSync(reportPath, 'utf8')) : undefined;
+if (report === undefined) {
+  const stderr = launched.stderr ?? '';
+  if (/managed exclusively by the Electron application/i.test(stderr)) {
+    console.error(`\n⚠️  profile "${profile}" is reserved for the Electron app, so the CLI cannot boot it.`);
+    console.error('   Verify the desktop install from inside the app (skill catalog / skill tool), or');
+    console.error('   point this script at a non-reserved profile whose bundle list mirrors the desktop one.');
+    rmSync(dir, { recursive: true, force: true });
+    process.exit(2);
   }
+  console.error(`\n❌ probe did not report; launcher status ${launched.status}`);
+  if (launched.error) console.error(`  ${launched.error.message}`);
+  if (stderr.trim() !== '') console.error(stderr.trim());
+  console.error('  Is `dsh` on PATH, and is the plugin installed into that profile?');
+  rmSync(dir, { recursive: true, force: true });
   process.exit(1);
 }
+
+console.log(`Discovered ${report.skills.length} skills in profile "${profile}":`);
+for (const skill of report.skills) console.log(`  - ${skill.name} (source: ${skill.source}, provider: ${skill.provider})`);
+if (report.error !== undefined) console.error(`\n❌ probe failed:\n${report.error}`);
+
+rmSync(dir, { recursive: true, force: true });
+
+if (report.scrapling === null || report.scrapling === undefined) {
+  console.error('\n❌ SCRAPLING SKILL NOT DISCOVERED — check bundledSkillDir resolution');
+  process.exit(1);
+}
+console.log('\n✅ SCRAPLING SKILL DISCOVERED');
+console.log(`   provider: ${report.scrapling.provider}`);
+console.log(`   source:   ${report.scrapling.source}`);
+console.log(`   path:     ${report.scrapling.path}`);
+if (report.load != null) {
+  console.log(`   loaded:   ${report.load.bodyChars} chars of SKILL.md, resources at ${report.load.resourceBase}`);
+}
+process.exit(0);

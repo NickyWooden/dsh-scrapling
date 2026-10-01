@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-scrapling",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Bundles the official Scrapling web-scraping agent skill (anti-bot bypass, stealth browsing, spiders, adaptive parsing) into a DeepSeek Harness profile.",
   "keywords": [
     "dsh",
@@ -21,6 +21,9 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "scripts": {
+    "test": "node test-discovery.mjs"
   },
   "files": [
     "skills",

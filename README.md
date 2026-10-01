@@ -42,12 +42,38 @@ dsh plugin --profile <profile> add /path/to/dsh-plugin-scrapling
 
 Or from the Web GUI: open the profile's **Plugins** page and install from the repository URL above.
 
+### DSH Desktop
+
+The desktop app runs the reserved `desktop` profile, so no extra setup is needed beyond
+installing into that profile:
+
+```bash
+dsh plugin --profile desktop add https://github.com/NickyWooden/dsh-scrapling
+```
+
+The app must have been opened at least once (so `~/.dsh/profiles/desktop/package.json`
+exists), and the running app picks the skill up when the profile recomposes — if the
+catalog does not show `scrapling-official` right away, restart the app. The same install is
+available from the profile's **Plugins** page in the GUI.
+
+The `desktop` profile is reserved: `dsh --profile desktop` and `dsh --profile desktop
+--dump-config` both refuse to run outside the Electron app (`profile "desktop" is managed
+exclusively by the Electron application`). `dsh plugin --profile desktop ...` is the
+supported exception, so package management still works from a terminal while the app runs.
+
+Note that Desktop profiles commonly stack sizeable third-party bundles (market, UI,
+preset packs). This plugin only *adds* a bundled skill root: it re-enables the host-level
+`skill-filesystem` row and appends one root, while every other provider keeps its own
+skills, and bundled roots rank below project-level ones (`.dsh/skills`,
+`.agents/skills`), so a project can still override `scrapling-official` locally.
+
 The skill becomes available the next time a session on that profile starts (or immediately,
 when HMR is enabled and the profile recomposes).
 
 ## Requirements
 
-- DeepSeek Harness `>= 0.1.7-rc.2`
+- DeepSeek Harness `>= 0.1.7-rc.2`; verified end to end against DSH Desktop `0.2.0-rc.2`
+  (Electron 0.2.0.0, bundled Node 24).
 - A profile whose composition includes the `dsh-skill-filesystem` provider (all shipped
   profiles do). The plugin re-enables the host-level `skill-filesystem` row if a bundle
   (e.g. the web-app bundle) had disabled it, so the bundled skill root is scanned on every
@@ -65,6 +91,21 @@ dependencies — the skill's `SKILL.md` walks the agent through this setup.
 - **`examples/`** — ready-to-run scripts (fetcher session, dynamic session, stealthy session,
   spider).
 
+## Verifying an install
+
+`test-discovery.mjs` boots a profile with a throwaway diagnostic plugin, lists the
+resulting skill catalog, loads the `scrapling-official` body through the provider, and
+exits non-zero when the skill is missing:
+
+```bash
+node test-discovery.mjs <profile>        # e.g. node test-discovery.mjs desktop
+```
+
+It needs `dsh` on `PATH` and the plugin already installed into that profile. The check
+runs the real launcher on purpose: a wrong `bundledSkillDir` is not a load error, it just
+means the root is scanned as an empty directory, and `dsh --dump-config` never evaluates
+the `!!js` expression — so a boot is the only thing that actually proves discovery.
+
 ## How it works (for maintainers)
 
 The bundle declares a single patch row in `cordis.patch.yml`:
@@ -74,7 +115,7 @@ The bundle declares a single patch row in `cordis.patch.yml`:
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: false
   config:
-    bundledSkillDir: !!js new URL('node_modules/dsh-plugin-scrapling/skills', baseUrl).pathname
+    bundledSkillDir: !!js process.getBuiltinModule("node:url").fileURLToPath(new URL("node_modules/dsh-plugin-scrapling/skills", baseUrl))
 ```
 
 - `bundledSkillDir` is the skill *root* (the directory that **contains** the
@@ -83,6 +124,12 @@ The bundle declares a single patch row in `cordis.patch.yml`:
 - `baseUrl` is the Loader's base URL — the profile directory, e.g.
   `file:///<dshHome>/profiles/<profile>/` — so the expression yields an absolute path
   independent of the process working directory.
+- `fileURLToPath`, **not** `URL.pathname`: on Windows `pathname` keeps the URL encoding
+  and yields `/C:/Users/...`, which the provider resolves to the non-existent
+  `C:\C:\Users\...`, so the skill is silently never discovered. `fileURLToPath` decodes
+  the URL and applies the platform's drive/UNC rules, so one expression works on Windows
+  and POSIX. `process` is always in scope for `!!js` evaluation, and shipped DSH bundles
+  use `process.getBuiltinModule(...)` the same way.
 - `disabled: false` re-enables the host-level row, which the web-app bundle disables
   (presets own local discovery there). Re-enabling it is safe: the registry merges skills
   from every provider and de-duplicates by name.
@@ -92,8 +139,9 @@ The bundle declares a single patch row in `cordis.patch.yml`:
 The skill content is a snapshot of the
 [`agent-skill/Scrapling-Skill`](https://github.com/D4Vinci/Scrapling/tree/main/agent-skill)
 directory of the Scrapling repository. To refresh it, copy the latest `Scrapling-Skill`
-contents into `skills/scrapling-official/`, bump the `version` in both `package.json` and the
-skill's `SKILL.md` frontmatter, and republish.
+contents into `skills/scrapling-official/`, bump the `version` in `package.json`, and
+replace the `version` in the skill's `SKILL.md` frontmatter with the upstream skill
+version it came from — that frontmatter tracks the upstream skill, not this plugin.
 
 ## License
 
